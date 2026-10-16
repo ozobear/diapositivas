@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arquitectura Hexagonal · Video Explicativo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060407;
+    --panel: #100A0F;
+    --user: #2A1523;
+    --border: #563040;
+    --border-subtle: #2A1720;
+    --text: #F6EFF3;
+    --muted: #A78E9B;
+    --dim: #76616B;
+    --accent: #F095C8;
+    --deep-pink: #C96AA2;
+    --active-pink: #FFB1DD;
+    --champagne: #E0C27A;
+    --pearl: #D2CBD0;
+    --soft-rose: #D7A0B8;
+    --powder-blue: #A9C7EE;
+    --mint: #B4E7C7;
+    --peach: #F2B86D;
+    --sky: #C4DAF6;
+    --error: #FF718F;
+    --sans: "Inter", "SF Pro Display", -apple-system, "Segoe UI", system-ui, sans-serif;
+    --mono: "JetBrains Mono", "Iosevka", "SF Mono", ui-monospace, Menlo, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); overflow: hidden; }
+
+  .stage { position: relative; width: 100vw; height: 100vh; height: 100dvh; cursor: pointer; }
+  .scene {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; justify-content: flex-start;
+    overflow: hidden;
+    padding: 6vh 7vw 170px;
+    opacity: 0; pointer-events: none;
+    transform: translateY(14px) scale(.99);
+    transition: opacity .45s ease, transform .45s ease;
+    background:
+      radial-gradient(1200px 600px at 110% -10%, rgba(240,149,200,.13), transparent 60%),
+      radial-gradient(900px 500px at -10% 120%, rgba(169,199,238,.08), transparent 60%),
+      var(--bg);
+  }
+  .scene.active { opacity: 1; pointer-events: auto; transform: none; }
+  .scene::before { content: ""; margin-top: auto; }
+  .scene::after { content: ""; margin-bottom: auto; }
+  .scene > * { flex-shrink: 0; }
+
+  .kicker { font-family: var(--mono); font-size: 1.05rem; letter-spacing: .18em; text-transform: uppercase; color: var(--accent); margin-bottom: 1.4vh; }
+  .kicker::before { content: "✿ "; color: var(--soft-rose); }
+  h1 { font-size: clamp(2.6rem, 6vw, 5.6rem); line-height: 1.02; font-weight: 800; letter-spacing: -.03em; }
+  h2 { font-size: clamp(2rem, 3.4vw, 3.2rem); line-height: 1.08; font-weight: 750; letter-spacing: -.02em; margin-bottom: 3vh; }
+  h3 { font-size: 1.3rem; color: var(--champagne); margin-bottom: .6rem; font-weight: 700; }
+  p, li { font-size: clamp(1.05rem, 1.4vw, 1.4rem); line-height: 1.5; color: var(--pearl); }
+  .lead { font-size: clamp(1.2rem, 1.8vw, 1.7rem); color: var(--muted); max-width: 62ch; margin-top: 2.4vh; }
+  .pink { color: var(--accent); } .gold { color: var(--champagne); } .mint { color: var(--mint); }
+  .blue { color: var(--powder-blue); } .rose { color: var(--soft-rose); } .peach { color: var(--peach); }
+  .red { color: var(--error); }
+  .muted { color: var(--muted); } .dim { color: var(--dim); }
+  .grad { background: linear-gradient(90deg, var(--active-pink), var(--accent) 45%, var(--champagne)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  code, .mono { font-family: var(--mono); }
+  code { background: var(--user); color: var(--champagne); padding: .1em .4em; border-radius: 6px; font-size: .9em; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 3vw; align-items: center; }
+  .grid-2:has(> .card) { align-items: stretch; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2vw; }
+  .card {
+    background: linear-gradient(180deg, rgba(42,21,35,.55), rgba(16,10,15,.9));
+    border: 1px solid var(--border-subtle); border-radius: 18px; padding: 2.6vh 1.6vw;
+    box-shadow: 0 0 0 1px rgba(240,149,200,.04), 0 18px 40px -24px rgba(240,149,200,.35);
+  }
+  .card p, .card li { font-size: clamp(.95rem, 1.2vw, 1.2rem); }
+  .card.accent { border-color: var(--border); }
+  .quote { border-left: 4px solid var(--deep-pink); padding: 1.2vh 1.4vw; background: rgba(42,21,35,.45); border-radius: 0 14px 14px 0; font-size: clamp(1.15rem, 1.6vw, 1.5rem); color: var(--text); margin-top: 3vh; }
+  .pill { display: inline-block; font-family: var(--mono); font-size: .85rem; padding: .25em .8em; border-radius: 999px; border: 1px solid var(--border); color: var(--active-pink); background: rgba(240,149,200,.07); margin: 0 .4em .4em 0; }
+
+  .term { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; font-family: var(--mono); box-shadow: 0 30px 60px -30px rgba(240,149,200,.4); }
+  .term .bar { display: flex; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--border-subtle); background: #0b070a; align-items: center; }
+  .term .bar i { width: 12px; height: 12px; border-radius: 50%; background: var(--border); }
+  .term .bar i:nth-child(1) { background: var(--error); } .term .bar i:nth-child(2) { background: var(--peach); } .term .bar i:nth-child(3) { background: var(--mint); }
+  .term .bar span { margin-left: auto; color: var(--dim); font-size: .85rem; }
+  .term pre { padding: 2vh 1.4vw; font-size: clamp(.8rem, 1.05vw, 1rem); line-height: 1.5; color: var(--text); white-space: pre-wrap; }
+  .term .c { color: var(--dim); } .term .p { color: var(--accent); } .term .k { color: var(--champagne); } .term .s { color: var(--mint); } .term .e { color: var(--error); }
+
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2vw; margin-top: 2vh; }
+  .step { background: var(--panel); border: 1px solid var(--border-subtle); border-radius: 14px; padding: 2.4vh 1.2vw; }
+  .step b { display: block; font-family: var(--mono); color: var(--accent); font-size: 1.5rem; }
+  .step span { display: block; color: var(--champagne); font-weight: 700; margin: .5rem 0 .6rem; font-size: 1.15rem; }
+  .step small { color: var(--pearl); font-size: clamp(.85rem, 1vw, .95rem); line-height: 1.45; display: block; }
+
+  table { width: 100%; border-collapse: collapse; font-size: clamp(.9rem, 1.1vw, 1.05rem); }
+  th { text-align: left; color: var(--champagne); font-weight: 700; padding: 1.2vh .8vw; border-bottom: 1px solid var(--border); }
+  td { padding: 1.1vh .8vw; border-bottom: 1px solid var(--border-subtle); color: var(--pearl); vertical-align: top; }
+  td:first-child { font-family: var(--mono); color: var(--accent); white-space: nowrap; }
+
+  .petals { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .petals span { position: absolute; top: -5vh; font-size: 1.4rem; color: var(--soft-rose); opacity: .35; animation: fall linear infinite; }
+  @keyframes fall { to { transform: translateY(115vh) rotate(360deg); } }
+
+  .fx-fade:not(.on) { opacity: 0; transform: translateY(16px); }
+  .fx-fade.on { animation: fadeUp .6s ease both; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } }
+
+  .fx-right:not(.on) { opacity: 0; transform: translateX(60px); }
+  .fx-right.on { animation: fromRight .6s cubic-bezier(.2,.9,.3,1.15) both; }
+  @keyframes fromRight { from { opacity: 0; transform: translateX(60px); } }
+
+  .fx-pop:not(.on) { opacity: 0; transform: scale(.6); }
+  .fx-pop.on { animation: pop .45s cubic-bezier(.2,1.5,.4,1) both; }
+  @keyframes pop { from { opacity: 0; transform: scale(.6); } }
+
+  .fx-slam:not(.on) { opacity: 0; transform: scale(1.7) rotate(-4deg); }
+  .fx-slam.on { animation: slam .55s cubic-bezier(.2,1.4,.4,1) both; }
+  @keyframes slam { 0% { opacity: 0; transform: scale(1.7) rotate(-4deg); } 60% { opacity: 1; transform: scale(.95); } }
+
+  .placas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.6vw; margin-top: 4vh; }
+  .placa { border: 1px solid var(--border); border-radius: 16px; padding: 2.4vh 1.4vw; background: linear-gradient(180deg, rgba(42,21,35,.8), rgba(16,10,15,.95)); box-shadow: 0 20px 50px -25px rgba(255,113,143,.5); }
+  .placa .who { font-family: var(--mono); color: var(--champagne); letter-spacing: .12em; text-transform: uppercase; font-size: .95rem; }
+  .placa .what { display: block; font-size: clamp(1.2rem, 1.8vw, 1.7rem); font-weight: 800; color: var(--text); margin-top: .4rem; }
+  .placa .ico { font-size: 1.8rem; float: right; }
+
+  .timeline { display: grid; grid-template-columns: 1fr 1fr 1fr; position: relative; margin-top: 2vh; }
+  .tl-step { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1.2vh; position: relative; }
+  .tl-node { width: 90px; height: 90px; border-radius: 50%; display: grid; place-items: center; font-size: 2.2rem; background: var(--panel); border: 2px solid var(--accent); box-shadow: 0 0 34px rgba(240,149,200,.45); }
+  .tl-year { font-family: var(--mono); font-weight: 800; font-size: 1.5rem; color: var(--champagne); }
+  .tl-what { font-size: 1.1rem; color: var(--pearl); }
+
+  .checks { list-style: none; display: grid; gap: 1.6vh; }
+  .chk { display: grid; grid-template-columns: 30px 1fr; gap: .9vw; align-items: center; }
+  .chk .box { width: 26px; height: 26px; border-radius: 6px; border: 2px solid var(--mint); background: rgba(180,231,199,.14); display: grid; place-items: center; color: var(--mint); font-weight: 800; }
+  .chk span { color: var(--text); font-size: clamp(.95rem, 1.2vw, 1.15rem); }
+
+  .brand { position: fixed; left: 2vw; top: 2vh; font-family: var(--mono); color: var(--dim); font-size: .9rem; z-index: 10; }
+  .brand b { color: var(--accent); font-weight: 600; }
+  .hint { position: fixed; top: 2vh; right: 2vw; font-family: var(--mono); color: var(--dim); font-size: .8rem; z-index: 10; transition: opacity 1s; }
+  #pause-badge { position: fixed; top: 2vh; left: 50%; transform: translateX(-50%); z-index: 12; font-family: var(--mono); font-weight: 800; letter-spacing: .3em; color: var(--bg); background: var(--accent); padding: .35em 1.1em; border-radius: 999px; font-size: .95rem; box-shadow: 0 0 30px rgba(240,149,200,.5); }
+  body:not(.paused) #pause-badge { display: none; }
+  #big-play { position: fixed; inset: 0; margin: auto; width: 220px; height: 220px; border-radius: 50%; z-index: 13; border: 2px solid var(--accent); background: rgba(16,10,15,.92); color: var(--active-pink); font: 700 1.25rem/1.3 var(--sans); cursor: pointer; display: grid; place-items: center; box-shadow: 0 0 60px rgba(240,149,200,.35); }
+  #big-play span span { display: block; font-size: 3rem; line-height: 1; margin-bottom: .3rem; }
+  #big-play[hidden] { display: none; }
+
+  #caption { position: fixed; left: 50%; bottom: 82px; transform: translateX(-50%); width: min(1100px, 86vw); text-align: center; z-index: 9; font-size: clamp(1rem, 1.3vw, 1.25rem); line-height: 1.45; color: var(--text); background: rgba(6,4,7,.82); border: 1px solid var(--border-subtle); border-radius: 12px; padding: .55em 1.1em; min-height: 2.9em; display: flex; align-items: center; justify-content: center; }
+  body.no-cc #caption { display: none; }
+
+  .controls { position: fixed; left: 0; right: 0; bottom: 0; height: 66px; z-index: 11; display: flex; align-items: center; gap: 12px; padding: 0 18px; background: linear-gradient(180deg, rgba(6,4,7,.4), rgba(6,4,7,.95)); border-top: 1px solid var(--border-subtle); font-family: var(--mono); }
+  .controls button { background: transparent; border: 1px solid var(--border); color: var(--active-pink); border-radius: 10px; height: 38px; min-width: 38px; padding: 0 10px; font: 700 1rem/1 var(--mono); cursor: pointer; }
+  .controls button:hover, .controls button:focus-visible { background: var(--user); outline: none; border-color: var(--accent); }
+  #play { min-width: 46px; font-size: 1.1rem; }
+  #time { color: var(--pearl); font-size: .95rem; white-space: nowrap; min-width: 12ch; }
+  #progress-track { position: relative; flex: 1; height: 26px; cursor: pointer; touch-action: none; }
+  #progress-track::before { content: ""; position: absolute; left: 0; right: 0; top: 10px; height: 6px; border-radius: 6px; background: var(--border-subtle); }
+  #progress { position: absolute; left: 0; top: 10px; height: 6px; border-radius: 6px; background: linear-gradient(90deg, var(--deep-pink), var(--accent), var(--champagne)); width: 0; pointer-events: none; }
+  #progress::after { content: ""; position: absolute; right: -7px; top: -4px; width: 14px; height: 14px; border-radius: 50%; background: var(--active-pink); box-shadow: 0 0 10px rgba(240,149,200,.8); }
+  .mark { position: absolute; top: 7px; width: 2px; height: 12px; background: var(--border); pointer-events: none; }
+  #dots { display: flex; gap: 6px; }
+  #dots button { width: 12px; min-width: 12px; height: 12px; padding: 0; border-radius: 50%; background: var(--border-subtle); border: 1px solid var(--border); }
+  #dots button.cur { background: var(--accent); border-color: var(--accent); }
+  #counter { color: var(--muted); font-size: .95rem; white-space: nowrap; }
+  #scene-label { color: var(--champagne); font-size: .9rem; white-space: nowrap; max-width: 22ch; overflow: hidden; text-overflow: ellipsis; }
+</style>
+</head>
+<body>
+<main class="stage" id="stage" aria-label="Video: Arquitectura Hexagonal">
+
+  <!-- Escena 1: Gancho -->
+  <section class="scene" aria-label="Escena 1 de 8: Gancho">
+    <div class="kicker fx-fade" data-t="0.2">Arquitectura Hexagonal · Guía técnica</div>
+    <h1 class="fx-fade" data-t="0.4">Tu lógica de negocio <span class="grad">atrapada en el framework</span></h1>
+    <div class="placas">
+      <div class="placa fx-slam" data-t="1.2"><span class="ico" aria-hidden="true">⚡</span><span class="who">Frameworks</span><span class="what">Breaking Changes anuales</span></div>
+      <div class="placa fx-slam" data-t="2.4"><span class="ico" aria-hidden="true">🗄️</span><span class="who">Base de Datos</span><span class="what">Dominio atado a tablas SQL</span></div>
+      <div class="placa fx-slam" data-t="3.6"><span class="ico" aria-hidden="true">🌐</span><span class="who">APIs Externas</span><span class="what">Mezcladas con controladores</span></div>
+    </div>
+    <p class="lead fx-fade" data-t="5.0" style="text-align:center;margin-left:auto;margin-right:auto">Hoy veremos cómo aislar el corazón de tu software (el dominio) para que sobreviva a cualquier cambio tecnológico.</p>
+  </section>
+
+  <!-- Escena 2: La Tesis -->
+  <section class="scene" aria-label="Escena 2 de 8: La Tesis">
+    <div class="kicker">La tesis central</div>
+    <h2>Misma aplicación, <span class="pink">destinos opuestos</span></h2>
+    <div class="grid-2">
+      <div class="card fx-fade" data-t="0.6">
+        <h3 class="mint">↗ Independencia tecnológica</h3>
+        <p class="muted">La lógica de negocio no sabe qué es Express, Spring Boot, PostgreSQL o MongoDB. Es pura, testeable en milisegundos y evoluciona sola.</p>
+      </div>
+      <div class="card fx-fade" data-t="1.4">
+        <h3 class="red">↘ Dependencia del Framework</h3>
+        <p class="muted">Anotaciones de ORM por doquier, lógica de negocio metida en controladores HTTP y tests acoplados a la base de datos que tardan horas.</p>
+      </div>
+    </div>
+    <p class="quote fx-fade" data-t="2.6">La herramienta no define la calidad de tu software. <b class="gold">Tu arquitectura define su vida útil</b>, y la tecnología solo la ejecuta.</p>
+  </section>
+
+  <!-- Escena 3: Historia -->
+  <section class="scene" aria-label="Escena 3 de 8: Contexto e Historia">
+    <div class="kicker">Contexto e historia</div>
+    <h2>De la arquitectura en capas al <span class="pink">Puerto y Adaptador</span></h2>
+    <div class="timeline">
+      <div class="tl-step fx-fade" data-t="0.5">
+        <div class="tl-node" aria-hidden="true">🏛️</div>
+        <span class="tl-year">Años 90</span><span class="tl-what">Capas Tradicionales (Presentación ➔ Negocio ➔ Datos)</span>
+      </div>
+      <div class="tl-step fx-fade" data-t="1.8">
+        <div class="tl-node" aria-hidden="true">⬡</div>
+        <span class="tl-year">2005</span><span class="tl-what">Alistair Cockburn crea Arquitectura Hexagonal</span>
+      </div>
+      <div class="tl-step fx-fade" data-t="3.0">
+        <div class="tl-node" aria-hidden="true">☁️</div>
+        <span class="tl-year">Actualidad</span><span class="tl-what">Microservicios, Serverless y Cloud Native</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Escena 4: Pilares -->
+  <section class="scene" aria-label="Escena 4 de 8: Conceptos Clave y Pilares">
+    <div class="kicker">Conceptos clave</div>
+    <h2>El contrato y la <span class="pink">implementación</span></h2>
+    <div class="steps">
+      <div class="step fx-fade" data-t="0.4"><b>1</b><span>Dominio (Core)</span><small>Entidades y reglas puras de negocio. Cero librerías externas.</small></div>
+      <div class="step fx-fade" data-t="1.2"><b>2</b><span>Puertos (Ports)</span><small>Interfaces que definen QUÉ necesita o expone el sistema (In / Out).</small></div>
+      <div class="step fx-fade" data-t="2.0"><b>3</b><span>Adaptadores</span><small>Implementaciones concretas (Controllers, Repositorios SQL, SDKs).</small></div>
+      <div class="step fx-fade" data-t="2.8"><b>4</b><span>Inyección</span><small>El pegamento que conecta los adaptadores a los puertos en runtime.</small></div>
+    </div>
+  </section>
+
+  <!-- Escena 5: Código -->
+  <section class="scene" aria-label="Escena 5 de 8: Comparativa de Código">
+    <div class="kicker">Comparativa de código</div>
+    <h2>Del desastre acoplado al <span class="pink">diseño desacoplado</span></h2>
+    <div class="grid-2">
+      <div class="term fx-fade" data-t="0.4">
+        <div class="bar"><i></i><i></i><i></i><span>❌ Mal: Acoplado al ORM</span></div>
+<pre><span class="e">import</span> { UserEntity } <span class="e">from</span> <span class="s">'./orm/user.entity'</span>;
+
+<span class="k">export class</span> <span class="p">CreateUser</span> {
+  <span class="k">async</span> execute(data) {
+    <span class="c">// Atado a TypeORM / Postgres</span>
+    <span class="k">return await</span> UserEntity.save(data);
+  }
+}</pre>
+      </div>
+      <div class="term fx-fade" data-t="1.0">
+        <div class="bar"><i></i><i></i><i></i><span>✓ Bien: Usando un Puerto</span></div>
+<pre><span class="e">import</span> { UserRepository } <span class="e">from</span> <span class="s">'../ports/user-repo'</span>;
+
+<span class="k">export class</span> <span class="p">CreateUser</span> {
+  <span class="k">constructor</span>(<span class="k">private</span> userRepo: UserRepository) {}
+
+  <span class="k">async</span> execute(cmd: RegisterCommand) {
+    <span class="k">return</span> <span class="k">this</span>.userRepo.save(<span class="k">new</span> User(cmd));
+  }
+}</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Escena 6: Testing -->
+  <section class="scene" aria-label="Escena 6 de 8: Estrategia de Pruebas">
+    <div class="kicker">Reglas de oro para testear</div>
+    <h2>Tests rápidos, <span class="pink">arquitectura saludable</span></h2>
+    <div class="grid-2">
+      <div class="card accent fx-fade" data-t="0.5">
+        <h3>Checklist de Verificación de Dominio</h3>
+        <ul class="checks" style="margin-top:1.6vh">
+          <li class="chk"><span class="box">✓</span><span>Casos de uso probados en memoria con Mocks sencillos.</span></li>
+          <li class="chk"><span class="box">✓</span><span>Cero frameworks involucrados en tests unitarios.</span></li>
+          <li class="chk"><span class="box">✓</span><span>Cientos de pruebas ejecutadas en milisegundos.</span></li>
+        </ul>
+      </div>
+      <div class="card accent fx-fade" data-t="1.2">
+        <h3>Matriz de Criticidad en Adaptadores</h3>
+        <p class="muted" style="margin-top:1vh"><b class="mint">Adaptadores Secundarios (BD / APIs):</b> Pruebas de integración aisladas con Testcontainers.</p>
+        <p class="muted" style="margin-top:1vh"><b class="pink">Adaptadores Primarios (HTTP / CLI):</b> Pruebas End-to-End o contratos API.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Escena 7: Checklist -->
+  <section class="scene" aria-label="Escena 7 de 8: Checklist de Validación">
+    <div class="kicker">Checklist de validación</div>
+    <h2>¿Es realmente <span class="pink">hexagonal</span> tu código?</h2>
+    <div class="card accent fx-fade" data-t="0.5">
+      <ul class="checks">
+        <li class="chk"><span class="box">✓</span><span>¿Puedo probar mis casos de uso sin levantar la base de datos ni la API HTTP?</span></li>
+        <li class="chk"><span class="box">✓</span><span>¿Las reglas de negocio están totalmente libres de anotaciones o decoradores del ORM?</span></li>
+        <li class="chk"><span class="box">✓</span><span>¿El dominio utiliza el lenguaje del negocio (Ubiquitous Language) y no términos de bases de datos?</span></li>
+        <li class="chk"><span class="box">✓</span><span>¿Todas las dependencias del proyecto apuntan estrictamente hacia el centro (Dominio)?</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Escena 8: Cierre -->
+  <section class="scene close" aria-label="Escena 8 de 8: Conclusión">
+    <div class="petals" aria-hidden="true"></div>
+    <div class="kicker fx-fade" data-t="0.2">Conclusión</div>
+    <h1 class="fx-fade" data-t="0.5">No dejes que el Framework dicte tu lógica.<br><span class="grad">Haz que el Dominio gobierne tu aplicación.</span></h1>
+    <p class="lead fx-fade" data-t="1.2" style="margin-top: 3vh;">Proteger las reglas del negocio es proteger el valor real de tu proyecto.</p>
+  </section>
+
+</main>
+
+<div class="brand"><b>gentleman programming</b> · arquitectura hexagonal</div>
+<div class="hint" id="hint">Espacio reproducir/pausar · ← → escenas · F pantalla completa · C subtítulos</div>
+<div id="pause-badge" role="status">❚❚ PAUSA</div>
+<button type="button" id="big-play" aria-label="Reproducir el video" hidden><span><span aria-hidden="true">▶</span>Reproducir</span></button>
+<div id="caption" aria-hidden="true"></div>
+
+<div class="controls" role="group" aria-label="Controles de reproducción">
+  <button type="button" id="prev" aria-label="Escena anterior">⏮</button>
+  <button type="button" id="play" aria-label="Pausar">❚❚</button>
+  <button type="button" id="next" aria-label="Escena siguiente">⏭</button>
+  <span id="time">00:00 / 06:00</span>
+  <div id="progress-track" role="slider" tabindex="0" aria-label="Línea de tiempo" aria-valuemin="0" aria-valuemax="360" aria-valuenow="0"><div id="progress"></div></div>
+  <div id="dots" role="group" aria-label="Escenas"></div>
+  <span id="counter" aria-label="Contador">1 / 8</span>
+  <span id="scene-label"></span>
+  <button type="button" id="cc" aria-label="Ocultar subtítulos" aria-pressed="true">CC</button>
+  <button type="button" id="fs" aria-label="Pantalla completa">⛶</button>
+</div>
+
+<script>
+  const DUR = [45, 45, 45, 45, 45, 45, 45, 45];
+  const TOTAL = DUR.reduce((a, b) => a + b, 0);
+  const START = DUR.map((_, k) => DUR.slice(0, k).reduce((a, b) => a + b, 0));
+  const TITLES = ['Gancho', 'La Tesis', 'Historia', 'Pilares', 'Código', 'Testing', 'Checklist', 'Cierre'];
+  const VOICE = [
+    'Tu lógica de negocio termina atrapada en el framework cuando dependes demasiado de breaking changes anuales, tablas SQL o controladores mezclados con APIs externas.',
+    'La tesis central es clara: misma aplicación, destinos opuestos. O logras independencia tecnológica pura, o te atrofias con la dependencia absoluta del framework.',
+    'Desde las capas tradicionales de los años 90 hasta la creación de la Arquitectura Hexagonal por Alistair Cockburn en 2005, el objetivo siempre ha sido el mismo: el negocio al centro.',
+    'Los cuatro pilares son sencillos: el Dominio puro en el centro, los Puertos como contratos, los Adaptadores como implementaciones y la Inyección de Dependencias.',
+    'Al comparar código, vemos la diferencia abismal entre un caso de uso acoplado al ORM de la base de datos y un caso de uso limpio que solo interactúa a través de un puerto.',
+    'Una arquitectura saludable permite ejecutar cientos de pruebas unitarias en milisegundos para verificar el dominio, mientras usamos contenedores para los adaptadores.',
+    'Asegúrate de pasar siempre el checklist de validación: ¿puedes probar tus casos de uso sin levantar la base de datos ni la API HTTP?',
+    'No dejes que el Framework dicte tu lógica. Haz que el Dominio gobierne tu aplicación. Proteger las reglas del negocio es proteger el valor real de tu proyecto.'
+  ];
+  const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const $ = (id) => document.getElementById(id);
+  const scenes = [...document.querySelectorAll('.scene')];
+  const track = $('progress-track'), bar = $('progress'), timeEl = $('time'), counter = $('counter');
+  const label = $('scene-label'), caption = $('caption'), playBtn = $('play'), bigPlay = $('big-play');
+
+  document.querySelectorAll('.petals').forEach((box) => {
+    for (let k = 0; k < 16; k++) {
+      const p = document.createElement('span');
+      p.textContent = k % 3 ? '❀' : '✿';
+      p.style.left = `${Math.random() * 100}%`;
+      p.style.animationDuration = `${9 + Math.random() * 10}s`;
+      p.style.animationDelay = `${-Math.random() * 18}s`;
+      box.appendChild(p);
+    }
+  });
+
+  const cues = scenes.map((s) => [...s.querySelectorAll('[data-t]')].map((el) => ({
+    el, t: +el.dataset.t, until: el.dataset.until != null ? +el.dataset.until : null
+  })));
+
+  const captions = VOICE.map((text, k) => {
+    const parts = text.match(/[^.?!]+[.?!]+["»]?/g) || [text];
+    const span = DUR[k] - 0.8;
+    const total = parts.reduce((a, p) => a + p.trim().length, 0);
+    let at = 0.3;
+    return parts.map((p) => {
+      const c = { start: at, text: p.trim() };
+      at += span * p.trim().length / total;
+      return c;
+    });
+  });
+
+  START.slice(1).forEach((s) => {
+    const m = document.createElement('i');
+    m.className = 'mark';
+    m.style.left = `${(s / TOTAL) * 100}%`;
+    track.appendChild(m);
+  });
+  const dots = TITLES.map((title, k) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('aria-label', `Ir a la escena ${k + 1}: ${title}`);
+    b.addEventListener('click', (e) => { jump(k); if (e.detail) b.blur(); });
+    $('dots').appendChild(b);
+    return b;
+  });
+
+  let t = 0, playing = false, cur = -1, capIdx = -1, lastSec = -1;
+  let last = performance.now();
+
+  const fmt = (s) => { s = Math.floor(s); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; };
+  const sceneAt = (time) => { let k = 0; while (k < DUR.length - 1 && time >= START[k + 1]) k++; return k; };
+
+  function activate(k) {
+    if (cur >= 0 && cur !== k) { scenes[cur].classList.remove('active'); scenes[cur].inert = true; }
+    const s = scenes[k];
+    cues[k].forEach((c) => c.el.classList.remove('on'));
+    s.classList.remove('active');
+    void s.offsetWidth;
+    s.classList.add('active');
+    s.inert = false;
+    cur = k;
+    capIdx = -1;
+    counter.textContent = `${k + 1} / ${scenes.length}`;
+    label.textContent = TITLES[k];
+    dots.forEach((d, j) => { d.classList.toggle('cur', j === k); d.setAttribute('aria-current', j === k ? 'step' : 'false'); });
+    try { history.replaceState(null, '', `#${k + 1}`); } catch (e) {}
+  }
+
+  function render() {
+    const k = sceneAt(t);
+    if (k !== cur) activate(k);
+    const local = t - START[k];
+    for (const c of cues[k]) {
+      const on = RM || (local >= c.t && (c.until == null || local < c.until));
+      if (on !== c.el.classList.contains('on')) c.el.classList.toggle('on', on);
+    }
+    const caps = captions[k];
+    let ci = 0;
+    while (ci < caps.length - 1 && local >= caps[ci + 1].start) ci++;
+    if (ci !== capIdx) { capIdx = ci; caption.textContent = caps[ci].text; }
+    bar.style.width = `${(t / TOTAL) * 100}%`;
+    const sec = Math.floor(t);
+    if (sec !== lastSec) {
+      lastSec = sec;
+      timeEl.textContent = `${fmt(t)} / ${fmt(TOTAL)}`;
+      track.setAttribute('aria-valuenow', String(sec));
+    }
+  }
+
+  function tick() {
+    const now = performance.now();
+    if (playing) {
+      t += (now - last) / 1000;
+      if (t >= TOTAL) { t = TOTAL; setPlaying(false); }
+    }
+    last = now;
+    render();
+  }
+
+  function setPlaying(on) {
+    if (on && t >= TOTAL) seek(0, true);
+    playing = on;
+    if (on) bigPlay.hidden = true;
+    last = performance.now();
+    document.body.classList.toggle('paused', !on);
+    playBtn.textContent = on ? '❚❚' : '▶';
+    playBtn.setAttribute('aria-label', on ? 'Pausar' : 'Reproducir');
+  }
+  const toggle = () => setPlaying(!playing);
+
+  function seek(time, restart) {
+    t = Math.min(Math.max(time, 0), TOTAL);
+    if (restart && sceneAt(t) === cur) activate(cur);
+    render();
+  }
+  const jump = (k) => seek(START[Math.min(Math.max(k, 0), DUR.length - 1)], true);
+
+  let dragging = false;
+  const scrubTo = (e) => { const r = track.getBoundingClientRect(); seek(Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1) * TOTAL); };
+  track.addEventListener('pointerdown', (e) => { dragging = true; track.setPointerCapture(e.pointerId); scrubTo(e); });
+  track.addEventListener('pointermove', (e) => { if (dragging) scrubTo(e); });
+  track.addEventListener('pointerup', () => { dragging = false; });
+  track.addEventListener('pointercancel', () => { dragging = false; });
+
+  const onBtn = (b, fn) => b.addEventListener('click', (e) => { fn(); if (e.detail) b.blur(); });
+  const fullscreen = () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+  };
+  const toggleCC = () => {
+    const off = document.body.classList.toggle('no-cc');
+    $('cc').setAttribute('aria-pressed', String(!off));
+  };
+  onBtn(playBtn, toggle);
+  onBtn($('prev'), () => jump(cur - 1));
+  onBtn($('next'), () => jump(cur + 1));
+  onBtn($('fs'), fullscreen);
+  onBtn($('cc'), toggleCC);
+  onBtn(bigPlay, () => setPlaying(true));
+  $('stage').addEventListener('click', (e) => { if (!e.target.closest('a, button')) toggle(); });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.target.closest && e.target.closest('button') && (e.key === ' ' || e.key === 'Enter')) return;
+    if (e.key === ' ' || e.key === 'k') { e.preventDefault(); toggle(); }
+    else if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); jump(cur + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); jump(cur - 1); }
+    else if (e.key === 'Home') jump(0);
+    else if (e.key === 'End') jump(DUR.length - 1);
+    else if (e.key.toLowerCase() === 'f') fullscreen();
+    else if (e.key.toLowerCase() === 'c') toggleCC();
+  });
+
+  scenes.forEach((s) => { s.inert = true; });
+  seek(0);
+  setPlaying(true);
+
+  setInterval(tick, 100);
+  const raf = () => { tick(); requestAnimationFrame(raf); };
+  requestAnimationFrame(raf);
+  setTimeout(() => { $('hint').style.opacity = 0; }, 5000);
+</script>
+</body>
+</html>
